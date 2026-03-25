@@ -60,6 +60,15 @@ const EXCEPTION_MAP = {
         Z: 0x2128, // ℨ
     },
 
+    // Style 17: Decorative Old English Style (same Gothic-style holes)
+    "Decorative Old English Style": {
+        C: 0x212d, // ℭ
+        H: 0x210c, // ℌ
+        I: 0x2111, // ℑ
+        R: 0x211c, // ℜ
+        Z: 0x2128, // ℨ
+    },
+
     // Style 9: Double Struck (Outline)
     "Double Struck (Outline)": {
         C: 0x2102, // ℂ
@@ -98,9 +107,12 @@ const styleConfig = [
     // we use the same Gothic (Fraktur) Unicode range.
     { name: "Decorative Old English Style", upper: 0x1d504, lower: 0x1d51e },
     { name: "Boxed Bubbles (Circled)", upper: 0x24b6, lower: 0x24d0, circledNumbers: true },
-    { name: "Boxed Dark Bubbles", upper: 0x1f150, lower: 0x1f169 },
+    // PDF style 19: in some fonts, lowercase glyphs may not be present.
+    // Fallback to uppercase mapping to avoid tofu blocks.
+    { name: "Boxed Dark Bubbles", upper: 0x1f150, lower: 0x1f169, lowerFallbackToUpper: true },
     { name: "Boxed Squares (Framed)", upper: 0x1f130, lower: 0x1f149 },
-    { name: "Boxed Dark Squares", upper: 0x1f170, lower: 0x1f189 },
+    // PDF style 21: same lowercase fallback rationale.
+    { name: "Boxed Dark Squares", upper: 0x1f170, lower: 0x1f189, lowerFallbackToUpper: true },
     { name: "Boxed Brackets", upper: 0x249c, lower: 0x24b5 },
     { name: "Linear Strikethrough", type: "combine", mark: "\u0336" },
     { name: "Linear Cross-Hatch", type: "combine", mark: "\u033D" },
@@ -262,8 +274,16 @@ function mapAlphaNumeric(char, config) {
     if (LETTERS_UPPER.includes(char) && config.upper) {
         return String.fromCodePoint(config.upper + (char.charCodeAt(0) - 65));
     }
-    if (LETTERS_LOWER.includes(char) && config.lower) {
-        return String.fromCodePoint(config.lower + (char.charCodeAt(0) - 97));
+    if (LETTERS_LOWER.includes(char)) {
+        // Some Unicode blocks provide better glyph coverage for the uppercase
+        // symbols than the lowercase variants. If requested, fall back to the
+        // uppercase range for lowercase input instead of returning tofu.
+        if (config.lowerFallbackToUpper && config.upper) {
+            return String.fromCodePoint(config.upper + (char.charCodeAt(0) - 97));
+        }
+        if (config.lower) {
+            return String.fromCodePoint(config.lower + (char.charCodeAt(0) - 97));
+        }
     }
     if (DIGITS.includes(char)) {
         if (config.circledNumbers) return circledNumberMap[char] || char;
